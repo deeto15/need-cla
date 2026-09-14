@@ -15,9 +15,15 @@ import (
 	"github.com/google/go-github/v43/github"
 )
 
-var stringMatchers = []string{"\bCLA\b", "Contributor License Agreement"}
+// stringMatchers are the patterns searched for in CONTRIBUTING.md and README.md.
+// The first is a case-insensitive whole-word match on "CLA". Note the pattern is a
+// raw string: in a Go double-quoted string "\b" is the backspace character, not a
+// regex word boundary, so the boundary must be written as \b inside a raw string.
+var stringMatchers = []string{`(?i)\bCLA\b`, "Contributor License Agreement"}
 var actionMatcher = "uses:[[:space:]]*?cla-assistant/github-action"
-var prLabelMatcher = "cla:[[:space:]]*?[yes|no]"
+// prLabelMatcher matches a "cla: yes" or "cla: no" PR label. The alternatives must
+// be grouped (yes|no); [yes|no] is a character class that matches a single char.
+var prLabelMatcher = "cla:[[:space:]]*?(yes|no)\\b"
 
 func Check(client *github.Client, owner string, repo string) (bool, error) {
 	return CheckWithContext(context.Background(), client, owner, repo)
@@ -42,12 +48,21 @@ func DetailWithContext(ctx context.Context, client *github.Client, owner string,
 		return Details{}, fmt.Errorf("remaining github rate limit too low")
 	}
 
-	r, resp, _ := client.Repositories.Get(ctx, owner, repo)
-	if resp.StatusCode == http.StatusNotFound {
-		return Details{}, fmt.Errorf("%s/%s: %w", owner, repo, ErrNotFound)
-	}
-	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
-		return Details{}, ErrInvalidToken
+	r, resp, err := client.Repositories.Get(ctx, owner, repo)
+	if err != nil {
+		// On a transport failure (DNS, connection refused, timeout) go-github
+		// returns a nil *http.Response, so the error must be checked before
+		// dereferencing resp. A non-nil error with a nil resp is a real failure.
+		if resp == nil {
+			return Details{}, fmt.Errorf("failed to get %s/%s: %w", owner, repo, err)
+		}
+		if resp.StatusCode == http.StatusNotFound {
+			return Details{}, fmt.Errorf("%s/%s: %w", owner, repo, ErrNotFound)
+		}
+		if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
+			return Details{}, ErrInvalidToken
+		}
+		return Details{}, fmt.Errorf("failed to get %s/%s (status %d): %w", owner, repo, resp.StatusCode, err)
 	}
 	def := r.GetDefaultBranch()
 

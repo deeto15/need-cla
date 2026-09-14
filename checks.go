@@ -59,7 +59,8 @@ func (c checker) isKnownCheck(ctx context.Context) result {
 
 func (c checker) isKnown() bool {
 	for _, o := range knownOwners {
-		if o == c.owner {
+		// GitHub owner names are case-insensitive, so compare case-insensitively.
+		if strings.EqualFold(o, c.owner) {
 			return true
 		}
 	}
@@ -194,7 +195,7 @@ func (c checker) usesCLAAssistantAction(ctx context.Context) (bool, error) {
 	}
 	workflowsTree, _, err := c.client.Git.GetTree(ctx, c.owner, c.repo, workflowsEntry.GetSHA(), false)
 	if err != nil {
-		return false, fmt.Errorf("failed to get %s/%s/master/.github/workflows tree: %v", c.owner, c.repo, err)
+		return false, fmt.Errorf("failed to get %s/%s/%s/.github/workflows tree: %v", c.owner, c.repo, c.branch, err)
 	}
 
 	errs := make(map[string]error)
@@ -290,7 +291,11 @@ func (c checker) contentAtPath(ctx context.Context, path string) ([]byte, error)
 	if b.GetEncoding() != "base64" {
 		return nil, fmt.Errorf("blob is encoded %s, only base64 is supported", b.GetEncoding())
 	}
-	return base64.StdEncoding.DecodeString(b.GetContent())
+	content, err := base64.StdEncoding.DecodeString(b.GetContent())
+	if err != nil {
+		return nil, fmt.Errorf("error decoding %s blob: %v", path, err)
+	}
+	return content, nil
 }
 
 func (c checker) contentAtSHA(ctx context.Context, sha string) ([]byte, error) {
@@ -301,7 +306,11 @@ func (c checker) contentAtSHA(ctx context.Context, sha string) ([]byte, error) {
 	if b.GetEncoding() != "base64" {
 		return nil, fmt.Errorf("blob is encoded %s, only base64 is supported", b.GetEncoding())
 	}
-	return base64.StdEncoding.DecodeString(b.GetContent())
+	content, err := base64.StdEncoding.DecodeString(b.GetContent())
+	if err != nil {
+		return nil, fmt.Errorf("error decoding %s blob: %v", sha, err)
+	}
+	return content, nil
 }
 
 func (c checker) referencesCLAInContent(content []byte) (bool, error) {

@@ -32,9 +32,7 @@ func main() {
 	}
 	ff.Parse(fs, os.Args[1:], ff.WithEnvVarPrefix("CLA"))
 	var httpClient *http.Client
-	if token == "" {
-		httpClient = nil
-	} else {
+	if token != "" {
 		ctx := context.Background()
 		ts := oauth2.StaticTokenSource(
 			&oauth2.Token{AccessToken: token},
@@ -45,6 +43,10 @@ func main() {
 	client := github.NewClient(httpClient)
 	owner := fs.Arg(0)
 	repo := fs.Arg(1)
+	if owner == "" || repo == "" {
+		fs.Usage()
+		os.Exit(2)
+	}
 
 	d, err := needcla.Detail(client, owner, repo)
 	if err != nil {
