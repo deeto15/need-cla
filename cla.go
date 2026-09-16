@@ -23,9 +23,11 @@ import (
 // must be written inside a raw string.
 var stringMatchers = []string{`(?i)\bCLA\b`, `(?i)Contributor Licen[cs]e Agreement`}
 var actionMatcher = "uses:[[:space:]]*?cla-assistant/github-action"
-// prLabelMatcher matches a "cla: yes" or "cla: no" PR label. The alternatives must
-// be grouped (yes|no); [yes|no] is a character class that matches a single char.
-var prLabelMatcher = "cla:[[:space:]]*?(yes|no)\\b"
+// prLabelMatcher matches a "cla: yes" or "cla: no" PR label, case-insensitively.
+// It is anchored at the start (^) so labels that merely end in "cla:"
+// (e.g. "not-a-cla: no") do not match, and the alternatives are grouped (yes|no)
+// since [yes|no] is a character class that matches a single char.
+var prLabelMatcher = "(?i)^cla:[[:space:]]*?(yes|no)\\b"
 
 // minCoreRateLimit is a lower bound on the core API calls DetailWithContext makes:
 // one repo get, one recursive tree get, and at least one PR list page, plus a blob
