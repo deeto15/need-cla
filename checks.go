@@ -86,28 +86,34 @@ func (c checker) hasCLATag(ctx context.Context) (bool, error) {
 		},
 		State: "all",
 	}
-	prs, _, err := c.client.PullRequests.List(ctx, c.owner, c.repo, opts)
-	if err != nil {
-		return false, fmt.Errorf("error getting %s/%s PRs: %v", c.owner, c.repo, err)
-	}
-	errs := make([]error, 0, 100)
-	for _, pr := range prs {
-		for _, label := range pr.Labels {
-			match, err := regexp.Match(prLabelMatcher, []byte(label.GetName()))
-			if err != nil {
-				errs = append(errs, err)
-			}
-			if match {
-				return true, nil
+	var errs []error
+	for {
+		prs, _, err := c.client.PullRequests.List(ctx, c.owner, c.repo, opts)
+		if err != nil {
+			return false, fmt.Errorf("error getting %s/%s PRs: %v", c.owner, c.repo, err)
+		}
+		for _, pr := range prs {
+			for _, label := range pr.Labels {
+				match, err := regexp.Match(prLabelMatcher, []byte(label.GetName()))
+				if err != nil {
+					errs = append(errs, err)
+				}
+				if match {
+					return true, nil
+				}
 			}
 		}
+		if len(prs) < opts.PerPage {
+			break
+		}
+		opts.Page++
 	}
 	if len(errs) != 0 {
 		var lines []string
 		for _, err := range errs {
 			lines = append(lines, fmt.Sprintf("* %v", err))
 		}
-		return false, fmt.Errorf("%d errors(s) checking recent PR labels:\n\t%s", len(errs), strings.Join(lines, "\n\t"))
+		return false, fmt.Errorf("%d errors(s) checking PR labels:\n\t%s", len(errs), strings.Join(lines, "\n\t"))
 	}
 
 	return false, nil

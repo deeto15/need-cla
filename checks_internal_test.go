@@ -40,3 +40,33 @@ func TestUsesCLAAssistantActionNoWorkflowsDir(t *testing.T) {
 		t.Errorf("expected Action=false when there is no .github/workflows dir, got true")
 	}
 }
+
+// TestReferencesCLAInContentCaseInsensitive ensures the CLA string matchers are
+// case-insensitive (and accept the British "Licence" spelling), so references
+// written in different cases are still detected.
+func TestReferencesCLAInContentCaseInsensitive(t *testing.T) {
+	c := checker{}
+	for _, content := range []string{
+		"contributor license agreement",
+		"CONTRIBUTOR LICENSE AGREEMENT",
+		"Contributor Licence Agreement",
+		"By contributing you agree to the CLA.",
+		"cla",
+	} {
+		got, err := c.referencesCLAInContent([]byte(content))
+		if err != nil {
+			t.Fatalf("referencesCLAInContent(%q) returned error: %v", content, err)
+		}
+		if !got {
+			t.Errorf("referencesCLAInContent(%q) = false, want true", content)
+		}
+	}
+
+	got, err := c.referencesCLAInContent([]byte("This project welcomes contributions."))
+	if err != nil {
+		t.Fatalf("referencesCLAInContent returned error: %v", err)
+	}
+	if got {
+		t.Errorf("referencesCLAInContent(no CLA) = true, want false")
+	}
+}

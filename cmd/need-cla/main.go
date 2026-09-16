@@ -62,7 +62,7 @@ func main() {
 		fmt.Sprintf("* %s %s a known CLA requirer", owner, is(d.Known)),
 		fmt.Sprintf("* CONTRIBUTING.md %s reference a CLA", does(d.InContributing)),
 		fmt.Sprintf("* README.md %s reference a CLA", does(d.InREADME)),
-		fmt.Sprintf("* %s use the cla-bot Github Action", does(d.Action)),
+		fmt.Sprintf("* a .github/workflow %s use the cla-assistant GitHub Action", does(d.Action)),
 		fmt.Sprintf("* PRs %s have \"cla\" tags", do(d.Tag)),
 		fmt.Sprintf("* .clabot file %s exist", does(d.BotFile)),
 	}

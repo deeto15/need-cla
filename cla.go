@@ -16,14 +16,23 @@ import (
 )
 
 // stringMatchers are the patterns searched for in CONTRIBUTING.md and README.md.
-// The first is a case-insensitive whole-word match on "CLA". Note the pattern is a
-// raw string: in a Go double-quoted string "\b" is the backspace character, not a
-// regex word boundary, so the boundary must be written as \b inside a raw string.
-var stringMatchers = []string{`(?i)\bCLA\b`, "Contributor License Agreement"}
+// Both are case-insensitive: the first is a whole-word match on "CLA", the second
+// on "Contributor License Agreement" (also matching the British "Licence" spelling).
+// They are raw strings: in a Go double-quoted string "\b" is the backspace
+// character, not a regex word boundary, so the \b boundary in the first pattern
+// must be written inside a raw string.
+var stringMatchers = []string{`(?i)\bCLA\b`, `(?i)Contributor Licen[cs]e Agreement`}
 var actionMatcher = "uses:[[:space:]]*?cla-assistant/github-action"
 // prLabelMatcher matches a "cla: yes" or "cla: no" PR label. The alternatives must
 // be grouped (yes|no); [yes|no] is a character class that matches a single char.
 var prLabelMatcher = "cla:[[:space:]]*?(yes|no)\\b"
+
+// minCoreRateLimit is a lower bound on the core API calls DetailWithContext makes:
+// one repo get, one recursive tree get, and at least one PR list page, plus a blob
+// get for each of CONTRIBUTING.md and README.md, the workflows tree, and one blob
+// per workflow file. Repos with many PRs or workflow files use more, so treat this
+// as a heuristic lower bound rather than an exact budget.
+const minCoreRateLimit = 20
 
 func Check(client *github.Client, owner string, repo string) (bool, error) {
 	return CheckWithContext(context.Background(), client, owner, repo)
@@ -43,8 +52,7 @@ func DetailWithContext(ctx context.Context, client *github.Client, owner string,
 	if err != nil {
 		return Details{}, fmt.Errorf("failed to get github rate limit: %w", err)
 	}
-	if limits.Core.Remaining < 10 {
-		// TODO: count actual API calls we'll make
+	if limits.Core.Remaining < minCoreRateLimit {
 		return Details{}, fmt.Errorf("remaining github rate limit too low")
 	}
 

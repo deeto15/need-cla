@@ -11,7 +11,7 @@ package needcla
 type Details struct {
 	// Known is true if the owner of a repo is a known CLA requirer
 	Known bool
-	// Tag is true if a sample of PRs in the repo use a 'cla: yes' and/or 'cla: no' label
+	// Tag is true if any PR in the repo uses a 'cla: yes' and/or 'cla: no' label
 	Tag bool
 	// BotFile is true if a .clabot config file is present in root
 	BotFile bool
