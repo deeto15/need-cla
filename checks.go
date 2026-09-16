@@ -193,6 +193,11 @@ func (c checker) usesCLAAssistantAction(ctx context.Context) (bool, error) {
 		}
 		return false, err
 	}
+	if workflowsEntry == nil {
+		// The repo has no .github/workflows directory, so it doesn't use
+		// GitHub Actions. find returns (nil, nil) for a missing path.
+		return false, nil
+	}
 	workflowsTree, _, err := c.client.Git.GetTree(ctx, c.owner, c.repo, workflowsEntry.GetSHA(), false)
 	if err != nil {
 		return false, fmt.Errorf("failed to get %s/%s/%s/.github/workflows tree: %v", c.owner, c.repo, c.branch, err)
